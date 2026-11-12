@@ -781,40 +781,64 @@ window.addEventListener('load', () => {
   prepararCanvas();
 });
 </script>
-<div class="pie" id="pie"><a href="#rrhh" onclick="abrirRRHH(event)">Acceso RR.HH.</a></div>
+<div class="pie" id="pie"><a href="#rrhh" onclick="abrirRRHH(event)">Acceso al panel (RR.HH. · Contabilidad · Gerencia)</a></div>
 
-<!-- ===================== PANEL RR.HH. ===================== -->
+<!-- ===================== PANEL ===================== -->
 <div id="rrhh" class="hidden">
   <div class="pw">
-    <div class="ph"><h1 style="text-align:left;margin:0">📋 Panel RR.HH. – Planillas de Movilidad</h1><a href="#" onclick="cerrarRRHH(event)">← Volver al formulario</a></div>
+    <div class="ph"><h1 style="text-align:left;margin:0">📋 Panel – Planillas de Movilidad</h1><span id="pQuien" style="color:#475569"></span><a href="#" onclick="cerrarRRHH(event)">← Volver al formulario</a></div>
 
     <div class="pcard" id="pLogin">
-      <div class="pbar"><input type="password" id="pClave" placeholder="Clave de RR.HH." onkeydown="if(event.key==='Enter')pEntrar()" style="max-width:260px"><button class="pprim" onclick="pEntrar()">Entrar</button></div>
+      <div class="pbar">
+        <select id="pUsuario" style="max-width:220px">
+          <option value="rrhh">Jefe de RR.HH.</option>
+          <option value="contabilidad">Contabilidad</option>
+          <option value="gerencia">Gerencia</option>
+        </select>
+        <input type="password" id="pClave" placeholder="Contraseña" onkeydown="if(event.key==='Enter')pEntrar()" style="max-width:220px">
+        <button class="pprim" onclick="pEntrar()">Entrar</button>
+      </div>
       <div class="aviso" id="pMsgLogin"></div>
     </div>
 
     <div id="pApp" class="hidden">
       <div class="pcard pbar">
-        <button onclick="pMover(-7)">◀</button><input type="date" id="pFecha" onchange="pCargar()" style="max-width:170px"><button onclick="pMover(7)">▶</button>
+        <select id="pModo" onchange="pCambioModo()" style="max-width:160px">
+          <option value="semanal">Semanal</option><option value="quincenal">Quincenal</option>
+          <option value="mensual">Mensual</option><option value="rango">Personalizado</option>
+        </select>
+        <span id="pNavPeriodo" class="pbar">
+          <button onclick="pMover(-1)">◀</button><input type="date" id="pFecha" onchange="pCargar()" style="max-width:170px"><button onclick="pMover(1)">▶</button>
+        </span>
+        <span id="pNavRango" class="pbar hidden">
+          <span>Del</span><input type="date" id="pDesde" style="max-width:165px"><span>al</span><input type="date" id="pHasta" style="max-width:165px"><button class="pprim" onclick="pCargar()">Ver</button>
+        </span>
         <b id="pRango"></b><span style="flex:1"></span>
         <select id="pFiltro" onchange="pPintar()" style="max-width:190px"><option value="">Todas</option><option value="PENDIENTE">Pendientes</option><option value="APROBADO">Aprobadas</option><option value="OBSERVADO">Observadas</option><option value="NOPAGADO">Aprobadas sin pagar</option></select>
-        <button onclick="pCargar()">↻</button><button onclick="pCsv()">⬇ Excel (CSV)</button><button onclick="pClaveNueva()">🔑 Clave</button>
+        <button onclick="pCargar()" title="Actualizar">↻</button><button onclick="pCsv()">⬇ Excel (CSV)</button>
+        <button onclick="pClaveNueva()">🔑 Mi contraseña</button><button id="pBtnReset" class="hidden" onclick="pRestablecer()">👥 Restablecer otra</button>
       </div>
       <div class="kpis">
         <div class="kpi"><div class="v" id="kRec">0</div><div class="l">Recibidas</div></div>
         <div class="kpi rojo"><div class="v" id="kFal">0</div><div class="l">Faltan enviar</div></div>
         <div class="kpi"><div class="v" id="kPen">0</div><div class="l">Por revisar</div></div>
         <div class="kpi verde"><div class="v" id="kApr">0</div><div class="l">Aprobadas</div></div>
-        <div class="kpi"><div class="v" id="kTot">S/ 0</div><div class="l">Total semana</div></div>
+        <div class="kpi"><div class="v" id="kTot">S/ 0</div><div class="l">Total del periodo</div></div>
         <div class="kpi"><div class="v" id="kPag">S/ 0</div><div class="l">Pagado</div></div>
       </div>
-      <div class="pcard"><b>Faltan enviar esta semana</b><div class="hint">Toca × si esa persona ya no trabaja aquí (deja de aparecer).</div><div id="pFaltan"></div></div>
+      <div class="pcard"><b>Faltan enviar en este periodo</b><div class="hint" id="pHintFaltan"></div><div id="pFaltan"></div></div>
       <div class="pcard">
-        <div class="pbar" style="margin-bottom:10px"><b style="flex:1">Checklist de planillas</b><button onclick="pAprobarRevisadas()">✔ Aprobar todas las revisadas</button></div>
+        <div class="pbar" style="margin-bottom:10px"><b style="flex:1">Checklist de planillas</b><button id="pBtnAprobar" onclick="pAprobarRevisadas()">✔ Aprobar todas las revisadas</button></div>
         <div style="overflow-x:auto"><table class="pt">
           <thead><tr><th>Trabajador</th><th>Fechas</th><th class="r">Total</th><th>PDF</th><th>✔ Revisado</th><th>Estado</th><th>✔ Pagado</th><th style="min-width:150px">Observación</th></tr></thead>
           <tbody id="pTabla"></tbody></table></div>
         <div class="aviso" id="pMsg"></div>
+      </div>
+      <div class="pcard">
+        <b>Resumen por trabajador</b>
+        <div style="overflow-x:auto;margin-top:8px"><table class="pt">
+          <thead><tr><th>Trabajador</th><th>Cargo</th><th class="r">Planillas</th><th class="r">Días</th><th class="r">Total S/</th><th class="r">Aprobado S/</th><th class="r">Pagado S/</th></tr></thead>
+          <tbody id="pResumen"></tbody></table></div>
       </div>
     </div>
   </div>
@@ -828,6 +852,7 @@ window.addEventListener('load', () => {
   .pcard { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding: 14px; margin-bottom: 12px; }
   .pbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .pbar input, .pbar select { margin-top: 0; }
+  #rrhh select { padding: 9px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; background: #fff; width: 100%; }
   #rrhh button { font-size: 14px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; cursor: pointer; font-weight: bold; }
   #rrhh button.pprim { background: #1a3b5c; color: #fff; border-color: #1a3b5c; }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
@@ -839,93 +864,154 @@ window.addEventListener('load', () => {
   .pt td { padding: 8px; border-top: 1px solid #e2e8f0; vertical-align: top; }
   .pt td.c { text-align: center; } .pt .r { text-align: right; white-space: nowrap; }
   .pt input[type=checkbox] { width: 20px; height: 20px; }
-  .pt select, .pt input[type=text] { font-size: 13px; padding: 5px 6px; margin: 0; }
+  #rrhh .pt select, .pt input[type=text] { font-size: 13px; padding: 5px 6px; margin: 0; }
   .chip { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #e2e8f0; margin-top: 3px; }
   .warn { color: #b45309; font-size: 11px; display: block; margin-top: 3px; }
+  #rrhh .warn button { font-size: 11px; padding: 2px 7px; margin-top: 3px; font-weight: normal; }
+  .quien { color: #64748b; font-size: 11px; display: block; margin-top: 3px; }
   tr.APROBADO { background: #dcfce7; } tr.OBSERVADO { background: #fee2e2; }
-  .falta { display: inline-flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 16px; padding: 4px 6px 4px 10px; margin: 6px 6px 0 0; font-size: 13px; }
+  .falta { display: inline-flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 16px; padding: 4px 10px; margin: 6px 6px 0 0; font-size: 13px; }
   #rrhh .falta button { padding: 0 7px; font-size: 13px; border-radius: 50%; }
   .pt a { color: #1d4ed8; cursor: pointer; }
 </style>
 
 <script>
-let P_CLAVE = '', P_DATA = null;
+let P_USER = '', P_CLAVE = '', P_DATA = null, P_ROL = '';
+const P_ROLES = { RRHH: 'RR.HH. (control total)', CONTABILIDAD: 'Contabilidad (consulta y pagos)', GERENCIA: 'Gerencia (solo consulta)' };
 function pEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function pDM(iso) { const p = String(iso).split('-'); return p[2] + '/' + p[1]; }
+function pDMA(iso) { const p = String(iso).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+function pFecha(iso) { const p = iso.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+async function papi(fn, body) { const j = await api(fn, Object.assign({ p_usuario: P_USER, p_clave: P_CLAVE }, body)); if (j && j.error) throw new Error(j.error); return j; }
+
+// Devuelve [desde, hasta] del periodo que contiene la fecha, según el modo.
+function pPeriodo(modo, iso) {
+  const d = pFecha(iso), y = d.getFullYear(), m = d.getMonth(), dia = d.getDate();
+  if (modo === 'semanal') { const dow = (d.getDay() + 6) % 7; return [isoLocal(new Date(y, m, dia - dow)), isoLocal(new Date(y, m, dia - dow + 6))]; }
+  if (modo === 'quincenal') return dia <= 15 ? [isoLocal(new Date(y, m, 1)), isoLocal(new Date(y, m, 15))] : [isoLocal(new Date(y, m, 16)), isoLocal(new Date(y, m + 1, 0))];
+  return [isoLocal(new Date(y, m, 1)), isoLocal(new Date(y, m + 1, 0))];
+}
+function pRangoActual() {
+  const modo = $('pModo').value;
+  if (modo === 'rango') return [$('pDesde').value, $('pHasta').value];
+  return pPeriodo(modo, $('pFecha').value || isoLocal(new Date()));
+}
+function pCambioModo() {
+  const r = $('pModo').value === 'rango';
+  $('pNavPeriodo').classList.toggle('hidden', r); $('pNavRango').classList.toggle('hidden', !r);
+  if (r) { const a = pPeriodo('mensual', $('pFecha').value || isoLocal(new Date())); if (!$('pDesde').value) $('pDesde').value = a[0]; if (!$('pHasta').value) $('pHasta').value = a[1]; }
+  pCargar();
+}
+function pMover(n) {
+  const r = pPeriodo($('pModo').value, $('pFecha').value), d = pFecha(n > 0 ? r[1] : r[0]);
+  d.setDate(d.getDate() + n); $('pFecha').value = isoLocal(d); pCargar();
+}
+
 function abrirRRHH(e) { if (e) e.preventDefault(); $('rrhh').classList.remove('hidden'); document.body.style.overflow = 'hidden'; if (!$('pFecha').value) $('pFecha').value = isoLocal(new Date()); }
 function cerrarRRHH(e) { if (e) e.preventDefault(); $('rrhh').classList.add('hidden'); document.body.style.overflow = ''; try { history.replaceState(null, '', location.pathname); } catch (x) {} }
 async function pEntrar() {
-  P_CLAVE = $('pClave').value; $('pMsgLogin').textContent = 'Cargando…';
-  try { pRecibir(await api('rrhh_semana', { clave: P_CLAVE, fecha: $('pFecha').value })); $('pLogin').classList.add('hidden'); $('pApp').classList.remove('hidden'); $('pMsgLogin').textContent = ''; }
-  catch (e) { $('pMsgLogin').textContent = e.message; }
+  P_USER = $('pUsuario').value; P_CLAVE = $('pClave').value; $('pMsgLogin').textContent = 'Cargando…';
+  try {
+    const r = pRangoActual(); pRecibir(await papi('panel_rango', { p_desde: r[0], p_hasta: r[1] }));
+    $('pLogin').classList.add('hidden'); $('pApp').classList.remove('hidden'); $('pMsgLogin').textContent = ''; $('pClave').value = '';
+  } catch (e) { $('pMsgLogin').textContent = e.message; }
 }
 async function pCargar() {
+  const r = pRangoActual();
+  if (!r[0] || !r[1]) return $('pMsg').textContent = 'Elige las dos fechas.';
+  if (r[0] > r[1]) return $('pMsg').textContent = 'La fecha inicial es mayor que la final.';
   $('pMsg').textContent = 'Cargando…';
-  try { pRecibir(await api('rrhh_semana', { clave: P_CLAVE, fecha: $('pFecha').value })); } catch (e) { $('pMsg').textContent = e.message; }
+  try { pRecibir(await papi('panel_rango', { p_desde: r[0], p_hasta: r[1] })); } catch (e) { $('pMsg').textContent = e.message; }
 }
-function pMover(n) { const p = $('pFecha').value.split('-').map(Number); $('pFecha').value = isoLocal(new Date(p[0], p[1] - 1, p[2] + n)); pCargar(); }
-function pRecibir(d) { P_DATA = d; $('pMsg').textContent = ''; pPintar(); }
+function pRecibir(d) {
+  P_DATA = d; P_ROL = d.rol; $('pMsg').textContent = '';
+  $('pQuien').textContent = '👤 ' + (P_ROLES[d.rol] || d.rol);
+  $('pBtnReset').classList.toggle('hidden', d.rol !== 'RRHH'); $('pBtnAprobar').classList.toggle('hidden', d.rol !== 'RRHH');
+  $('pHintFaltan').textContent = d.rol === 'RRHH' ? 'Toca × si esa persona ya no trabaja aquí (deja de aparecer).' : '';
+  pPintar();
+}
 function pPintar() {
-  const d = P_DATA, P = d.planillas; P.forEach(p => p.total = Number(p.total));
-  $('pRango').textContent = 'Semana del ' + pDM(d.lunes) + ' al ' + pDM(d.domingo);
+  const d = P_DATA, P = d.planillas, rh = P_ROL === 'RRHH', ct = P_ROL === 'CONTABILIDAD'; P.forEach(p => p.total = Number(p.total));
+  $('pRango').textContent = 'Del ' + pDMA(d.desde) + ' al ' + pDMA(d.hasta);
   $('kRec').textContent = P.length; $('kFal').textContent = d.faltan.length;
   $('kPen').textContent = P.filter(p => p.estado === 'PENDIENTE').length; $('kApr').textContent = P.filter(p => p.estado === 'APROBADO').length;
   $('kTot').textContent = 'S/ ' + P.reduce((a, p) => a + p.total, 0).toFixed(2);
   $('kPag').textContent = 'S/ ' + P.filter(p => p.pagado).reduce((a, p) => a + p.total, 0).toFixed(2);
-  $('pFaltan').innerHTML = d.faltan.length ? d.faltan.map(p => '<span class="falta">' + pEsc(p.nombre) + ' · ' + pEsc(p.cargo) + ' <button title="Ya no trabaja aquí" onclick="pInactivar(\'' + pEsc(p.dni) + '\')">×</button></span>').join('')
+  $('pFaltan').innerHTML = d.faltan.length ? d.faltan.map(p => '<span class="falta">' + pEsc(p.nombre) + ' · ' + pEsc(p.cargo) + (rh ? ' <button title="Ya no trabaja aquí" onclick="pInactivar(\'' + pEsc(p.dni) + '\')">×</button>' : '') + '</span>').join('')
     : '<div style="color:#15803d;margin-top:6px">' + (d.total_personal ? '✅ Todo el personal envió su planilla.' : 'La lista de personal se arma sola con la primera planilla de cada trabajador.') + '</div>';
   const f = $('pFiltro').value;
   const lista = P.filter(p => !f || (f === 'NOPAGADO' ? p.estado === 'APROBADO' && !p.pagado : p.estado === f));
   $('pTabla').innerHTML = lista.map(p => {
-    const i = P.indexOf(p);
+    const i = P.indexOf(p), puedePagar = rh || (ct && p.estado === 'APROBADO');
     return '<tr class="' + pEsc(p.estado) + '"><td><b>' + pEsc(p.nombre) + '</b><br><span class="chip">' + pEsc(p.cargo) + '</span> <span class="chip">' + pEsc(p.empresa) + '</span> <span class="chip">' + pEsc(p.numero) + '</span>' +
-      (p.alerta && p.alerta.indexOf('⚠') >= 0 ? '<span class="warn">' + pEsc(p.alerta) + '</span>' : '') + '</td>' +
+      (p.alerta && p.alerta.indexOf('⚠') >= 0 ? '<span class="warn">' + pEsc(p.alerta) + (rh ? '<br><button onclick="pFijarNombre(' + i + ')">Usar «' + pEsc(p.nombre) + '» como nombre correcto</button>' : '') + '</span>' : '') +
+      (p.rev_por ? '<span class="quien">Últ. cambio: ' + pEsc(p.rev_por) + ' · ' + pEsc(p.fecha_rev) + '</span>' : '') + '</td>' +
       '<td>' + pDM(p.desde) + ' – ' + pDM(p.hasta) + '<br><span style="color:#64748b">' + p.dias + ' día(s)</span></td>' +
       '<td class="r"><b>S/ ' + p.total.toFixed(2) + '</b></td>' +
       '<td><a onclick="pVerPdf(' + i + ')">Ver PDF</a></td>' +
-      '<td class="c"><input type="checkbox" ' + (p.revisado ? 'checked' : '') + ' onchange="pCambiar(' + i + ',{revisado:this.checked})"></td>' +
-      '<td><select onchange="pCambiar(' + i + ',{estado:this.value})">' + ['PENDIENTE', 'APROBADO', 'OBSERVADO'].map(e => '<option' + (e === p.estado ? ' selected' : '') + '>' + e + '</option>').join('') + '</select></td>' +
-      '<td class="c"><input type="checkbox" ' + (p.pagado ? 'checked' : '') + ' onchange="pCambiar(' + i + ',{pagado:this.checked})"></td>' +
-      '<td><input type="text" value="' + pEsc(p.obs) + '" placeholder="—" onchange="pCambiar(' + i + ',{obs:this.value})"></td></tr>';
-  }).join('') || '<tr><td colspan="8" style="color:#64748b;padding:16px">No hay planillas para esta semana' + (f ? ' con este filtro' : '') + '.</td></tr>';
+      '<td class="c"><input type="checkbox" ' + (p.revisado ? 'checked' : '') + (rh ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{revisado:this.checked})"></td>' +
+      '<td><select' + (rh ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{estado:this.value})">' + ['PENDIENTE', 'APROBADO', 'OBSERVADO'].map(e => '<option' + (e === p.estado ? ' selected' : '') + '>' + e + '</option>').join('') + '</select></td>' +
+      '<td class="c"><input type="checkbox" ' + (p.pagado ? 'checked' : '') + (puedePagar ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{pagado:this.checked})"></td>' +
+      '<td>' + (rh ? '<input type="text" value="' + pEsc(p.obs) + '" placeholder="—" onchange="pCambiar(' + i + ',{obs:this.value})">' : pEsc(p.obs || '—')) + '</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="color:#64748b;padding:16px">No hay planillas en este periodo' + (f ? ' con este filtro' : '') + '.</td></tr>';
+  $('pResumen').innerHTML = (d.resumen || []).map(r => '<tr><td><b>' + pEsc(r.nombre) + '</b></td><td>' + pEsc(r.cargo) + '</td><td class="r">' + r.planillas + '</td><td class="r">' + r.dias +
+    '</td><td class="r"><b>' + Number(r.total).toFixed(2) + '</b></td><td class="r">' + Number(r.aprobado).toFixed(2) + '</td><td class="r">' + Number(r.pagado).toFixed(2) + '</td></tr>').join('')
+    || '<tr><td colspan="7" style="color:#64748b;padding:16px">Sin datos en este periodo.</td></tr>';
 }
 async function pCambiar(i, cambios) {
   const p = P_DATA.planillas[i];
-  if (cambios.pagado && p.estado !== 'APROBADO') cambios.estado = 'APROBADO';
-  if (cambios.estado === 'APROBADO') cambios.revisado = true;
+  if (P_ROL === 'RRHH') {
+    if (cambios.pagado && p.estado !== 'APROBADO') cambios.estado = 'APROBADO';
+    if (cambios.estado === 'APROBADO') cambios.revisado = true;
+  }
   Object.assign(p, cambios); pPintar(); $('pMsg').textContent = 'Guardando…';
-  try { await api('rrhh_actualizar', { clave: P_CLAVE, planilla_id: p.id, cambios }); $('pMsg').textContent = ''; }
-  catch (e) { $('pMsg').textContent = 'No se guardó: ' + e.message; pCargar(); }
+  try { await papi('panel_actualizar', { p_planilla_id: p.id, p_cambios: cambios }); await pCargar(); }
+  catch (e) { await pCargar(); $('pMsg').textContent = 'No se guardó: ' + e.message; }
 }
 async function pAprobarRevisadas() {
-  const ids = P_DATA.planillas.map((p, i) => i).filter(i => P_DATA.planillas[i].revisado && P_DATA.planillas[i].estado === 'PENDIENTE');
-  for (const i of ids) await pCambiar(i, { estado: 'APROBADO' });
+  const ids = P_DATA.planillas.filter(p => p.revisado && p.estado === 'PENDIENTE').map(p => p.id);
+  if (!ids.length) return $('pMsg').textContent = 'No hay planillas revisadas pendientes de aprobar.';
+  $('pMsg').textContent = 'Guardando…';
+  try { for (const id of ids) await papi('panel_actualizar', { p_planilla_id: id, p_cambios: { estado: 'APROBADO', revisado: true } }); await pCargar(); }
+  catch (e) { await pCargar(); $('pMsg').textContent = 'No se guardó: ' + e.message; }
 }
 async function pInactivar(dni) {
-  try { await api('rrhh_personal_activo', { clave: P_CLAVE, p_dni: dni, p_activo: false }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
+  try { await papi('panel_personal_activo', { p_dni: dni, p_activo: false }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
+}
+async function pFijarNombre(i) {
+  try { await papi('panel_fijar_nombre', { p_planilla_id: P_DATA.planillas[i].id }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
 }
 async function pVerPdf(i) {
   const p = P_DATA.planillas[i]; $('pMsg').textContent = 'Abriendo PDF…';
   try {
-    const b64 = await api('rrhh_pdf', { clave: P_CLAVE, planilla_id: p.id });
-    const bin = atob(b64), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
+    const r = await papi('panel_pdf', { p_planilla_id: p.id });
+    const bin = atob(r.pdf), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
     const url = URL.createObjectURL(new Blob([u], { type: 'application/pdf' }));
     const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.download = p.numero + '.pdf'; document.body.appendChild(a); a.click(); a.remove();
     $('pMsg').textContent = '';
   } catch (e) { $('pMsg').textContent = e.message; }
 }
 function pCsv() {
-  const filas = [['N°', 'Empresa', 'Apellidos y Nombres', 'DNI', 'Cargo', 'Semana', 'Desde', 'Hasta', 'Días', 'Total S/', 'Detalle', 'Revisado', 'Estado', 'Pagado', 'Observación', 'Recibido']];
+  const fila = r => r.map(x => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(';');
+  const filas = [['N°', 'Empresa', 'Apellidos y Nombres', 'DNI', 'Cargo', 'Semana', 'Desde', 'Hasta', 'Días', 'Total S/', 'Detalle', 'Revisado', 'Estado', 'Pagado', 'Observación', 'Recibido', 'Último cambio por']];
   P_DATA.planillas.forEach(p => filas.push([p.numero, p.empresa, p.nombre, p.dni, p.cargo, p.semana, p.desde, p.hasta, p.dias, p.total.toFixed(2),
-    (p.rutas || []).map(r => r.fecha + ' ' + r.destino + ' S/' + Number(r.monto).toFixed(2)).join(' | '), p.revisado ? 'SI' : 'NO', p.estado, p.pagado ? 'SI' : 'NO', p.obs, p.recibido]));
-  const csv = '﻿' + filas.map(r => r.map(x => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(';')).join('\r\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'planillas_semana_' + P_DATA.lunes + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+    (p.rutas || []).map(r => r.fecha + ' ' + r.destino + ' S/' + Number(r.monto).toFixed(2)).join(' | '), p.revisado ? 'SI' : 'NO', p.estado, p.pagado ? 'SI' : 'NO', p.obs, p.recibido, p.rev_por || '']));
+  filas.push([]); filas.push(['RESUMEN POR TRABAJADOR']); filas.push(['Apellidos y Nombres', 'DNI', 'Cargo', 'Planillas', 'Días', 'Total S/', 'Aprobado S/', 'Pagado S/']);
+  (P_DATA.resumen || []).forEach(r => filas.push([r.nombre, r.dni, r.cargo, r.planillas, r.dias, Number(r.total).toFixed(2), Number(r.aprobado).toFixed(2), Number(r.pagado).toFixed(2)]));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + filas.map(fila).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'planillas_' + P_DATA.desde + '_a_' + P_DATA.hasta + '.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
 async function pClaveNueva() {
-  const n = window.prompt('Nueva clave de RR.HH. (mínimo 8 caracteres):');
+  const n = window.prompt('Nueva contraseña para tu usuario (mínimo 8 caracteres):');
   if (!n) return;
-  try { await api('rrhh_cambiar_clave', { clave: P_CLAVE, nueva: n }); P_CLAVE = n; $('pMsg').textContent = '✅ Clave cambiada.'; } catch (e) { $('pMsg').textContent = e.message; }
+  try { await papi('panel_cambiar_clave', { p_nueva: n }); P_CLAVE = n; $('pMsg').textContent = '✅ Contraseña cambiada.'; } catch (e) { $('pMsg').textContent = e.message; }
+}
+async function pRestablecer() {
+  const u = window.prompt('¿De qué usuario? Escribe: contabilidad o gerencia');
+  if (!u) return;
+  const n = window.prompt('Nueva contraseña para "' + u.trim().toLowerCase() + '" (mínimo 8 caracteres):');
+  if (!n) return;
+  try { await papi('panel_restablecer_clave', { p_objetivo: u, p_nueva: n }); if (u.trim().toLowerCase() === P_USER) P_CLAVE = n; $('pMsg').textContent = '✅ Contraseña de ' + u.trim().toLowerCase() + ' restablecida.'; } catch (e) { $('pMsg').textContent = e.message; }
 }
 if (location.hash === '#rrhh') window.addEventListener('load', () => abrirRRHH());
 </script>
