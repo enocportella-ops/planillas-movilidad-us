@@ -803,16 +803,8 @@ window.addEventListener('load', () => {
 
     <div id="pApp" class="hidden">
       <div class="pcard pbar">
-        <select id="pModo" onchange="pCambioModo()" style="max-width:160px">
-          <option value="semanal">Semanal</option><option value="quincenal">Quincenal</option>
-          <option value="mensual">Mensual</option><option value="rango">Personalizado</option>
-        </select>
-        <span id="pNavPeriodo" class="pbar">
-          <button onclick="pMover(-1)">◀</button><input type="date" id="pFecha" onchange="pCargar()" style="max-width:170px"><button onclick="pMover(1)">▶</button>
-        </span>
-        <span id="pNavRango" class="pbar hidden">
-          <span>Del</span><input type="date" id="pDesde" style="max-width:165px"><span>al</span><input type="date" id="pHasta" style="max-width:165px"><button class="pprim" onclick="pCargar()">Ver</button>
-        </span>
+        <span class="pbar" style="flex-wrap:nowrap"><span>Del</span><input type="date" id="pDesde" onchange="pCargar()" style="width:160px"><span>al</span><input type="date" id="pHasta" onchange="pCargar()" style="width:160px"></span>
+        <span class="pbar" style="flex-wrap:nowrap"><button onclick="pAtajo('semanal')">Esta semana</button><button onclick="pAtajo('quincenal')">Quincena</button><button onclick="pAtajo('mensual')">Mes</button></span>
         <b id="pRango"></b><span style="flex:1"></span>
         <select id="pFiltro" onchange="pPintar()" style="max-width:190px"><option value="">Todas</option><option value="PENDIENTE">Pendientes</option><option value="APROBADO">Aprobadas</option><option value="OBSERVADO">Observadas</option><option value="NOPAGADO">Aprobadas sin pagar</option></select>
         <button onclick="pCargar()" title="Actualizar">↻</button><button onclick="pCsv()">⬇ Excel (CSV)</button>
@@ -891,23 +883,10 @@ function pPeriodo(modo, iso) {
   if (modo === 'quincenal') return dia <= 15 ? [isoLocal(new Date(y, m, 1)), isoLocal(new Date(y, m, 15))] : [isoLocal(new Date(y, m, 16)), isoLocal(new Date(y, m + 1, 0))];
   return [isoLocal(new Date(y, m, 1)), isoLocal(new Date(y, m + 1, 0))];
 }
-function pRangoActual() {
-  const modo = $('pModo').value;
-  if (modo === 'rango') return [$('pDesde').value, $('pHasta').value];
-  return pPeriodo(modo, $('pFecha').value || isoLocal(new Date()));
-}
-function pCambioModo() {
-  const r = $('pModo').value === 'rango';
-  $('pNavPeriodo').classList.toggle('hidden', r); $('pNavRango').classList.toggle('hidden', !r);
-  if (r) { const a = pPeriodo('mensual', $('pFecha').value || isoLocal(new Date())); if (!$('pDesde').value) $('pDesde').value = a[0]; if (!$('pHasta').value) $('pHasta').value = a[1]; }
-  pCargar();
-}
-function pMover(n) {
-  const r = pPeriodo($('pModo').value, $('pFecha').value), d = pFecha(n > 0 ? r[1] : r[0]);
-  d.setDate(d.getDate() + n); $('pFecha').value = isoLocal(d); pCargar();
-}
+function pRangoActual() { return [$('pDesde').value, $('pHasta').value]; }
+function pAtajo(modo) { const r = pPeriodo(modo, isoLocal(new Date())); $('pDesde').value = r[0]; $('pHasta').value = r[1]; pCargar(); }
 
-function abrirRRHH(e) { if (e) e.preventDefault(); $('rrhh').classList.remove('hidden'); document.body.style.overflow = 'hidden'; if (!$('pFecha').value) $('pFecha').value = isoLocal(new Date()); }
+function abrirRRHH(e) { if (e) e.preventDefault(); $('rrhh').classList.remove('hidden'); document.body.style.overflow = 'hidden'; if (!$('pDesde').value) { const r = pPeriodo('semanal', isoLocal(new Date())); $('pDesde').value = r[0]; $('pHasta').value = r[1]; } }
 function cerrarRRHH(e) { if (e) e.preventDefault(); $('rrhh').classList.add('hidden'); document.body.style.overflow = ''; try { history.replaceState(null, '', location.pathname); } catch (x) {} }
 async function pEntrar() {
   P_USER = $('pUsuario').value; P_CLAVE = $('pClave').value; $('pMsgLogin').textContent = 'Cargando…';
