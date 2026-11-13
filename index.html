@@ -865,6 +865,7 @@ window.addEventListener('load', () => {
   .falta { display: inline-flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 16px; padding: 4px 10px; margin: 6px 6px 0 0; font-size: 13px; }
   #rrhh .falta button { padding: 0 7px; font-size: 13px; border-radius: 50%; }
   .pt a { color: #1d4ed8; cursor: pointer; }
+  .pt a.pdel { color: #b91c1c; font-size: 12px; display: inline-block; margin-top: 8px; white-space: nowrap; }
 </style>
 
 <script>
@@ -927,7 +928,7 @@ function pPintar() {
       (p.rev_por ? '<span class="quien">Últ. cambio: ' + pEsc(p.rev_por) + ' · ' + pEsc(p.fecha_rev) + '</span>' : '') + '</td>' +
       '<td>' + pDM(p.desde) + ' – ' + pDM(p.hasta) + '<br><span style="color:#64748b">' + p.dias + ' día(s)</span></td>' +
       '<td class="r"><b>S/ ' + p.total.toFixed(2) + '</b></td>' +
-      '<td><a onclick="pVerPdf(' + i + ')">Ver PDF</a></td>' +
+      '<td><a onclick="pVerPdf(' + i + ')">Ver PDF</a>' + (rh ? '<br><a class="pdel" onclick="pEliminar(' + i + ')">🗑 Eliminar</a>' : '') + '</td>' +
       '<td class="c"><input type="checkbox" ' + (p.revisado ? 'checked' : '') + (rh ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{revisado:this.checked})"></td>' +
       '<td><select' + (rh ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{estado:this.value})">' + ['PENDIENTE', 'APROBADO', 'OBSERVADO'].map(e => '<option' + (e === p.estado ? ' selected' : '') + '>' + e + '</option>').join('') + '</select></td>' +
       '<td class="c"><input type="checkbox" ' + (p.pagado ? 'checked' : '') + (puedePagar ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{pagado:this.checked})"></td>' +
@@ -959,6 +960,14 @@ async function pInactivar(dni) {
 }
 async function pFijarNombre(i) {
   try { await papi('panel_fijar_nombre', { p_planilla_id: P_DATA.planillas[i].id }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
+}
+async function pEliminar(i) {
+  const p = P_DATA.planillas[i];
+  if (p.pagado) return $('pMsg').textContent = 'Esta planilla está marcada como pagada. Desmarca "Pagado" antes de eliminarla.';
+  if (!window.confirm('¿Eliminar la planilla ' + p.numero + ' de ' + p.nombre + ' (S/ ' + p.total.toFixed(2) + ')?\n\nSe borra con su PDF y no se puede deshacer.')) return;
+  $('pMsg').textContent = 'Eliminando…';
+  try { await papi('panel_eliminar', { p_planilla_id: p.id }); await pCargar(); $('pMsg').textContent = '✅ Planilla ' + p.numero + ' eliminada.'; }
+  catch (e) { await pCargar(); $('pMsg').textContent = 'No se eliminó: ' + e.message; }
 }
 async function pVerPdf(i) {
   const p = P_DATA.planillas[i]; $('pMsg').textContent = 'Abriendo PDF…';
