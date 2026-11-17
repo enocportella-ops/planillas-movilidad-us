@@ -810,10 +810,12 @@ window.addEventListener('load', () => {
         <span class="pbar" style="flex-wrap:nowrap"><span>Del</span><input type="date" id="pDesde" onchange="pCargar()" style="width:160px"><span>al</span><input type="date" id="pHasta" onchange="pCargar()" style="width:160px"></span>
         <span class="pbar" style="flex-wrap:nowrap"><button onclick="pAtajo('semanal')">Esta semana</button><button onclick="pAtajo('quincenal')">Quincena</button><button onclick="pAtajo('mensual')">Mes</button></span>
         <b id="pRango"></b><span style="flex:1"></span>
+        <input type="search" id="pBuscar" placeholder="🔍 Buscar nombre o DNI" oninput="pPintar()" style="max-width:240px">
         <select id="pFiltro" onchange="pPintar()" style="max-width:190px"><option value="">Todas</option><option value="PENDIENTE">Pendientes</option><option value="APROBADO">Aprobadas</option><option value="OBSERVADO">Observadas</option><option value="NOPAGADO">Aprobadas sin pagar</option></select>
         <button onclick="pCargar()" title="Actualizar">↻</button><button onclick="pCsv()">⬇ Excel (CSV)</button>
         <button onclick="pClaveNueva()">🔑 Mi contraseña</button><button id="pBtnReset" class="hidden" onclick="pRestablecer()">👥 Restablecer otra</button>
       </div>
+      <div class="hint" id="pBuscarInfo" style="margin:-4px 0 8px 4px"></div>
       <div class="kpis">
         <div class="kpi"><div class="v" id="kRec">0</div><div class="l">Recibidas</div></div>
         <div class="kpi rojo"><div class="v" id="kFal">0</div><div class="l">Faltan enviar</div></div>
@@ -920,17 +922,21 @@ function pRecibir(d) {
   $('pHintFaltan').textContent = d.rol === 'RRHH' ? 'Toca × si esa persona ya no trabaja aquí (deja de aparecer).' : '';
   pPintar();
 }
+function pNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 function pPintar() {
   const d = P_DATA, P = d.planillas, rh = P_ROL === 'RRHH', ct = P_ROL === 'CONTABILIDAD'; P.forEach(p => p.total = Number(p.total));
+  const q = pNorm($('pBuscar').value), hay = x => !q || pNorm(x.nombre).includes(q) || String(x.dni).includes(q);
+  const PS = P.filter(hay), FS = d.faltan.filter(hay), RS = (d.resumen || []).filter(hay);
+  $('pBuscarInfo').textContent = q ? PS.length + ' planilla(s) y ' + FS.length + ' pendiente(s) para «' + $('pBuscar').value.trim() + '»' : '';
   $('pRango').textContent = 'Del ' + pDMA(d.desde) + ' al ' + pDMA(d.hasta);
-  $('kRec').textContent = P.length; $('kFal').textContent = d.faltan.length;
-  $('kPen').textContent = P.filter(p => p.estado === 'PENDIENTE').length; $('kApr').textContent = P.filter(p => p.estado === 'APROBADO').length;
-  $('kTot').textContent = 'S/ ' + P.reduce((a, p) => a + p.total, 0).toFixed(2);
-  $('kPag').textContent = 'S/ ' + P.filter(p => p.pagado).reduce((a, p) => a + p.total, 0).toFixed(2);
-  $('pFaltan').innerHTML = d.faltan.length ? d.faltan.map(p => '<span class="falta">' + pEsc(p.nombre) + ' · ' + pEsc(p.cargo) + (rh ? ' <button title="Ya no trabaja aquí" onclick="pInactivar(\'' + pEsc(p.dni) + '\')">×</button>' : '') + '</span>').join('')
-    : '<div style="color:#15803d;margin-top:6px">' + (d.total_personal ? '✅ Todo el personal envió su planilla.' : 'La lista de personal se arma sola con la primera planilla de cada trabajador.') + '</div>';
+  $('kRec').textContent = PS.length; $('kFal').textContent = FS.length;
+  $('kPen').textContent = PS.filter(p => p.estado === 'PENDIENTE').length; $('kApr').textContent = PS.filter(p => p.estado === 'APROBADO').length;
+  $('kTot').textContent = 'S/ ' + PS.reduce((a, p) => a + p.total, 0).toFixed(2);
+  $('kPag').textContent = 'S/ ' + PS.filter(p => p.pagado).reduce((a, p) => a + p.total, 0).toFixed(2);
+  $('pFaltan').innerHTML = FS.length ? FS.map(p => '<span class="falta">' + pEsc(p.nombre) + ' · ' + pEsc(p.cargo) + (rh ? ' <button title="Ya no trabaja aquí" onclick="pInactivar(\'' + pEsc(p.dni) + '\')">×</button>' : '') + '</span>').join('')
+    : '<div style="color:#15803d;margin-top:6px">' + (q ? 'Nadie con ese nombre o DNI tiene planilla pendiente.' : d.total_personal ? '✅ Todo el personal envió su planilla.' : 'La lista de personal se arma sola con la primera planilla de cada trabajador.') + '</div>';
   const f = $('pFiltro').value;
-  const lista = P.filter(p => !f || (f === 'NOPAGADO' ? p.estado === 'APROBADO' && !p.pagado : p.estado === f));
+  const lista = PS.filter(p => !f || (f === 'NOPAGADO' ? p.estado === 'APROBADO' && !p.pagado : p.estado === f));
   $('pTabla').innerHTML = lista.map(p => {
     const i = P.indexOf(p), puedePagar = rh || (ct && p.estado === 'APROBADO');
     return '<tr class="' + pEsc(p.estado) + '"><td><b>' + pEsc(p.nombre) + '</b><br><span class="chip">' + pEsc(p.cargo) + '</span> <span class="chip">' + pEsc(p.empresa) + '</span> <span class="chip">' + pEsc(p.numero) + '</span>' +
@@ -949,7 +955,7 @@ function pPintar() {
       '<td>' + (rh ? '<input type="text" value="' + pEsc(p.obs) + '" placeholder="—" onchange="pCambiar(' + i + ',{obs:this.value})">' : pEsc(p.obs || '—')) + '</td></tr>';
   }).join('') || '<tr><td colspan="8" style="color:#64748b;padding:16px">No hay planillas en este periodo' + (f ? ' con este filtro' : '') + '.</td></tr>';
   pPonerFirmas();
-  $('pResumen').innerHTML = (d.resumen || []).map(r => '<tr><td><b>' + pEsc(r.nombre) + '</b></td><td>' + pEsc(r.cargo) + '</td><td class="r">' + r.planillas + '</td><td class="r">' + r.dias +
+  $('pResumen').innerHTML = RS.map(r => '<tr><td><b>' + pEsc(r.nombre) + '</b></td><td>' + pEsc(r.cargo) + '</td><td class="r">' + r.planillas + '</td><td class="r">' + r.dias +
     '</td><td class="r"><b>' + Number(r.total).toFixed(2) + '</b></td><td class="r">' + Number(r.aprobado).toFixed(2) + '</td><td class="r">' + Number(r.pagado).toFixed(2) + '</td></tr>').join('')
     || '<tr><td colspan="7" style="color:#64748b;padding:16px">Sin datos en este periodo.</td></tr>';
 }
