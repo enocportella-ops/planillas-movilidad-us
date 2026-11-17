@@ -935,9 +935,10 @@ function pPintar() {
     const i = P.indexOf(p), puedePagar = rh || (ct && p.estado === 'APROBADO');
     return '<tr class="' + pEsc(p.estado) + '"><td><b>' + pEsc(p.nombre) + '</b><br><span class="chip">' + pEsc(p.cargo) + '</span> <span class="chip">' + pEsc(p.empresa) + '</span> <span class="chip">' + pEsc(p.numero) + '</span>' +
       (p.alerta && p.alerta.indexOf('⚠') >= 0 ? '<span class="warn">' + pEsc(p.alerta) + (rh ? '<br><button onclick="pFijarNombre(' + i + ')">Usar «' + pEsc(p.nombre) + '» como nombre correcto</button>' : '') + '</span>'
-        : (p.nombre_verificado ? '<span class="okv">✔ Nombre verificado con DNI</span>' : '<span class="warn">Nombre sin verificar' + (rh ? ' <button onclick="pFijarNombre(' + i + ')">✔ Coincide con su DNI</button>' : '') + '</span>')) +
+        : (p.nombre_verificado ? '<span class="okv">✔ Nombre verificado con DNI' + (rh ? ' <button class="mini" onclick="pQuitarVerif(' + i + ')">↶ Deshacer</button>' : '') + '</span>' : '<span class="warn">Nombre sin verificar' + (rh ? ' <button onclick="pFijarNombre(' + i + ')">✔ Coincide con su DNI</button>' : '') + '</span>')) +
       '<div class="firmas"><div><small>Firma de esta planilla</small><img id="fi-' + p.id + '" alt=""></div><div><small>' + (p.firma_ref_planilla ? 'Referencia (' + pEsc(p.firma_ref_planilla) + ')' : 'Sin firma de referencia') + '</small><img id="fr-' + p.id + '" alt=""></div></div>' +
-      (rh && p.firma_ref_planilla !== p.numero ? '<button class="mini" onclick="pFirmaRef(' + i + ')">Usar esta firma como referencia</button>' : '') +
+      (rh ? '<div>' + (p.firma_ref_planilla !== p.numero ? '<button class="mini" onclick="pFirmaRef(' + i + ')">Usar esta firma como referencia</button> ' : '') +
+        (p.firma_ref_planilla ? '<button class="mini" onclick="pQuitarRef(' + i + ')">↶ Quitar firma de referencia</button>' : '') + '</div>' : '') +
       (p.rev_por ? '<span class="quien">Últ. cambio: ' + pEsc(p.rev_por) + ' · ' + pEsc(p.fecha_rev) + '</span>' : '') + '</td>' +
       '<td>' + pDM(p.desde) + ' – ' + pDM(p.hasta) + '<br><span style="color:#64748b">' + p.dias + ' día(s)</span></td>' +
       '<td class="r"><b>S/ ' + p.total.toFixed(2) + '</b></td>' +
@@ -973,6 +974,8 @@ async function pInactivar(dni) {
   try { await papi('panel_personal_activo', { p_dni: dni, p_activo: false }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
 }
 async function pFijarNombre(i) {
+  const p = P_DATA.planillas[i];
+  if (!window.confirm('¿Confirmas que «' + p.nombre + '» coincide con el DNI ' + p.dni + '?\n\nDesde ahora el trabajador deberá escribir su nombre exactamente así.')) return;
   try { await papi('panel_fijar_nombre', { p_planilla_id: P_DATA.planillas[i].id }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
 }
 const P_FIRMAS = {}, P_REFS = {};
@@ -984,6 +987,16 @@ async function pPonerFirmas() {
   if (!faltan.length) return;
   try { const r = await papi('panel_firmas', { p_ids: faltan }); faltan.forEach(id => P_FIRMAS[id] = (r.firmas || {})[id] || '');
     Object.assign(P_REFS, r.refs || {}); pinta(); } catch (e) {}
+}
+async function pQuitarVerif(i) {
+  const p = P_DATA.planillas[i];
+  if (!window.confirm('¿Quitar la verificación del nombre de ' + p.nombre + '?')) return;
+  try { await papi('panel_quitar_verificacion', { p_planilla_id: p.id }); await pCargar(); $('pMsg').textContent = '↶ Verificación quitada.'; } catch (e) { $('pMsg').textContent = e.message; }
+}
+async function pQuitarRef(i) {
+  const p = P_DATA.planillas[i];
+  if (!window.confirm('¿Quitar la firma de referencia de ' + p.nombre + '?\n\nSe volverá a tomar de la próxima planilla que apruebes.')) return;
+  try { await papi('panel_quitar_firma_ref', { p_planilla_id: p.id }); delete P_REFS[p.dni]; await pCargar(); $('pMsg').textContent = '↶ Firma de referencia quitada.'; } catch (e) { $('pMsg').textContent = e.message; }
 }
 async function pFirmaRef(i) {
   const p = P_DATA.planillas[i];
