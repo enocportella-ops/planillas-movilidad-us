@@ -46,6 +46,8 @@
   .hidden { display: none !important; }
   .ok { text-align: center; }
   .ok .n { font-size: 22px; font-weight: bold; color: #16a34a; margin: 6px 0; }
+  .ayuda { text-align: center; font-size: 13px; color: #334155; margin-top: 14px; line-height: 1.5; }
+  .ayuda a { color: #15803d; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -60,8 +62,8 @@
   </div>
 
   <div class="sec">2. Tus datos</div>
-  <label for="nombre">Apellidos y Nombres</label>
-  <input id="nombre" autocomplete="name" placeholder="Ej: SILVA PIMENTEL JUAN" style="text-transform:uppercase">
+  <label for="nombre">Apellidos y nombres (igual que en tu DNI)</label>
+  <input id="nombre" autocomplete="name" placeholder="Ej: PÉREZ QUISPE JUAN CARLOS" style="text-transform:uppercase">
   <label for="dni">DNI / C.E / PSP</label>
   <input id="dni" inputmode="numeric" maxlength="12" placeholder="Número de documento">
   <label for="area">Área y/o Departamento</label>
@@ -86,13 +88,14 @@
   <div class="total"><span>TOTAL</span><span id="total">S/ 0.00</span></div>
 
   <div class="sec">5. Firma</div>
-  <label>Firma o rúbrica (con el dedo)</label>
+  <label>Firma con el dedo (similar a la de tu DNI)</label>
   <canvas id="firma"></canvas>
   <button type="button" class="btn btn-sec" style="padding:8px;font-size:13px" onclick="limpiarFirma()">Borrar firma</button>
   <label class="decl"><input type="checkbox" id="declaracion"><span>Declaro bajo juramento que los gastos de movilidad detallados corresponden a desplazamientos realizados en cumplimiento de mis funciones y que la firma consignada es mía.</span></label>
 
   <div class="aviso" id="avisoFinal"></div>
   <button type="button" class="btn btn-ok" id="btnEnviar" onclick="enviar()">Firmar y enviar planilla</button>
+  <div class="ayuda">📞 ¿Dudas o problemas con la app? <a href="https://wa.me/51922635017" target="_blank" rel="noopener">Escríbeme por WhatsApp</a> o llama al <a href="tel:+51922635017">922 635 017</a></div>
 </div>
 
 <div class="card hidden" id="okCard">
@@ -102,6 +105,7 @@
     <div class="n" id="okNumero"></div>
     <div id="okDetalle" style="font-size:14px"></div>
     <div class="hint" style="margin-top:10px">Ya llegó a la empresa. No necesitas enviar nada más.</div>
+    <div class="ayuda">📞 ¿Dudas o problemas con la app? <a href="https://wa.me/51922635017" target="_blank" rel="noopener">Escríbeme por WhatsApp</a> o llama al <a href="tel:+51922635017">922 635 017</a></div>
     <button type="button" class="btn btn-sec" onclick="location.reload()">Llenar otra planilla</button>
   </div>
 </div>
@@ -728,7 +732,7 @@ async function enviar() {
   const av = $('avisoFinal'); av.textContent = '';
   const nombre = $('nombre').value.trim().toUpperCase().replace(/\s+/g, ' '), dni = $('dni').value.trim().toUpperCase();
   if (!empresa) return av.textContent = 'Elige la empresa (paso 1).';
-  if (nombre.split(' ').length < 2) return av.textContent = 'Escribe tus apellidos y nombres completos.';
+  if (nombre.split(' ').length < 3) return av.textContent = 'Escribe tus apellidos y nombres completos, igual que en tu DNI (ej: PÉREZ QUISPE JUAN CARLOS).';
   if (!/^[0-9A-Z]{8,12}$/.test(dni)) return av.textContent = 'El DNI / C.E debe tener entre 8 y 12 caracteres, sin espacios.';
   if (!cargo) return av.textContent = 'Elige tu cargo: Conductor o Auxiliar.';
   if (!$('motivo').value.trim()) return av.textContent = 'Indica el motivo.';
@@ -774,7 +778,7 @@ async function enviar() {
 
 window.addEventListener('load', () => {
   $('imgUS').src = LOGOS.US.src; $('imgUSDL').src = LOGOS.USDL.src;
-  $('hintMax').textContent = 'Máximo S/ ' + CFG.maxPorDia.toFixed(2) + ' por día. Agrega una fila por cada día.';
+  $('hintMax').textContent = 'Envía tu planilla al terminar la semana, con todos tus viajes. Una fila por día, máximo S/ ' + CFG.maxPorDia.toFixed(2) + ' por día.';
   $('area').value = 'DESPACHO PROVINCIA'; $('motivo').value = 'TRASLADO DE MERCADERÍA';
   ['nombre', 'dni', 'area', 'motivo'].forEach(k => $(k).addEventListener('input', guardar));
   if (!cargar()) agregarRuta();
@@ -860,6 +864,12 @@ window.addEventListener('load', () => {
   .chip { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #e2e8f0; margin-top: 3px; }
   .warn { color: #b45309; font-size: 11px; display: block; margin-top: 3px; }
   #rrhh .warn button { font-size: 11px; padding: 2px 7px; margin-top: 3px; font-weight: normal; }
+  .okv { color: #15803d; font-size: 11px; display: block; margin-top: 3px; }
+  .firmas { display: flex; gap: 8px; margin-top: 6px; }
+  .firmas div { border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px 5px; background: #fff; width: 150px; }
+  .firmas small { display: block; font-size: 10px; color: #64748b; }
+  .firmas img { display: block; width: 100%; height: 52px; object-fit: contain; }
+  #rrhh button.mini { font-size: 11px; padding: 2px 7px; margin-top: 4px; font-weight: normal; }
   .quien { color: #64748b; font-size: 11px; display: block; margin-top: 3px; }
   tr.APROBADO { background: #dcfce7; } tr.OBSERVADO { background: #fee2e2; }
   .falta { display: inline-flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 16px; padding: 4px 10px; margin: 6px 6px 0 0; font-size: 13px; }
@@ -924,7 +934,10 @@ function pPintar() {
   $('pTabla').innerHTML = lista.map(p => {
     const i = P.indexOf(p), puedePagar = rh || (ct && p.estado === 'APROBADO');
     return '<tr class="' + pEsc(p.estado) + '"><td><b>' + pEsc(p.nombre) + '</b><br><span class="chip">' + pEsc(p.cargo) + '</span> <span class="chip">' + pEsc(p.empresa) + '</span> <span class="chip">' + pEsc(p.numero) + '</span>' +
-      (p.alerta && p.alerta.indexOf('⚠') >= 0 ? '<span class="warn">' + pEsc(p.alerta) + (rh ? '<br><button onclick="pFijarNombre(' + i + ')">Usar «' + pEsc(p.nombre) + '» como nombre correcto</button>' : '') + '</span>' : '') +
+      (p.alerta && p.alerta.indexOf('⚠') >= 0 ? '<span class="warn">' + pEsc(p.alerta) + (rh ? '<br><button onclick="pFijarNombre(' + i + ')">Usar «' + pEsc(p.nombre) + '» como nombre correcto</button>' : '') + '</span>'
+        : (p.nombre_verificado ? '<span class="okv">✔ Nombre verificado con DNI</span>' : '<span class="warn">Nombre sin verificar' + (rh ? ' <button onclick="pFijarNombre(' + i + ')">✔ Coincide con su DNI</button>' : '') + '</span>')) +
+      '<div class="firmas"><div><small>Firma de esta planilla</small><img id="fi-' + p.id + '" alt=""></div><div><small>' + (p.firma_ref_planilla ? 'Referencia (' + pEsc(p.firma_ref_planilla) + ')' : 'Sin firma de referencia') + '</small><img id="fr-' + p.id + '" alt=""></div></div>' +
+      (rh && p.firma_ref_planilla !== p.numero ? '<button class="mini" onclick="pFirmaRef(' + i + ')">Usar esta firma como referencia</button>' : '') +
       (p.rev_por ? '<span class="quien">Últ. cambio: ' + pEsc(p.rev_por) + ' · ' + pEsc(p.fecha_rev) + '</span>' : '') + '</td>' +
       '<td>' + pDM(p.desde) + ' – ' + pDM(p.hasta) + '<br><span style="color:#64748b">' + p.dias + ' día(s)</span></td>' +
       '<td class="r"><b>S/ ' + p.total.toFixed(2) + '</b></td>' +
@@ -934,6 +947,7 @@ function pPintar() {
       '<td class="c"><input type="checkbox" ' + (p.pagado ? 'checked' : '') + (puedePagar ? '' : ' disabled') + ' onchange="pCambiar(' + i + ',{pagado:this.checked})"></td>' +
       '<td>' + (rh ? '<input type="text" value="' + pEsc(p.obs) + '" placeholder="—" onchange="pCambiar(' + i + ',{obs:this.value})">' : pEsc(p.obs || '—')) + '</td></tr>';
   }).join('') || '<tr><td colspan="8" style="color:#64748b;padding:16px">No hay planillas en este periodo' + (f ? ' con este filtro' : '') + '.</td></tr>';
+  pPonerFirmas();
   $('pResumen').innerHTML = (d.resumen || []).map(r => '<tr><td><b>' + pEsc(r.nombre) + '</b></td><td>' + pEsc(r.cargo) + '</td><td class="r">' + r.planillas + '</td><td class="r">' + r.dias +
     '</td><td class="r"><b>' + Number(r.total).toFixed(2) + '</b></td><td class="r">' + Number(r.aprobado).toFixed(2) + '</td><td class="r">' + Number(r.pagado).toFixed(2) + '</td></tr>').join('')
     || '<tr><td colspan="7" style="color:#64748b;padding:16px">Sin datos en este periodo.</td></tr>';
@@ -960,6 +974,22 @@ async function pInactivar(dni) {
 }
 async function pFijarNombre(i) {
   try { await papi('panel_fijar_nombre', { p_planilla_id: P_DATA.planillas[i].id }); pCargar(); } catch (e) { $('pMsg').textContent = e.message; }
+}
+const P_FIRMAS = {}, P_REFS = {};
+async function pPonerFirmas() {
+  const P = P_DATA.planillas, faltan = P.filter(p => !(p.id in P_FIRMAS)).map(p => p.id);
+  const pinta = () => P.forEach(p => { const a = $('fi-' + p.id), b = $('fr-' + p.id);
+    if (a && P_FIRMAS[p.id]) a.src = P_FIRMAS[p.id]; if (b && P_REFS[p.dni]) b.src = P_REFS[p.dni]; });
+  pinta();
+  if (!faltan.length) return;
+  try { const r = await papi('panel_firmas', { p_ids: faltan }); faltan.forEach(id => P_FIRMAS[id] = (r.firmas || {})[id] || '');
+    Object.assign(P_REFS, r.refs || {}); pinta(); } catch (e) {}
+}
+async function pFirmaRef(i) {
+  const p = P_DATA.planillas[i];
+  if (!window.confirm('¿Usar la firma de ' + p.numero + ' como firma de referencia de ' + p.nombre + '?')) return;
+  try { await papi('panel_firma_ref', { p_planilla_id: p.id }); delete P_REFS[p.dni]; P_DATA.planillas.forEach(x => { if (x.dni === p.dni) delete P_FIRMAS[x.id]; }); await pCargar(); }
+  catch (e) { $('pMsg').textContent = e.message; }
 }
 async function pEliminar(i) {
   const p = P_DATA.planillas[i];
