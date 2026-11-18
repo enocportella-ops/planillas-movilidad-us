@@ -48,6 +48,9 @@
   .ok .n { font-size: 22px; font-weight: bold; color: #16a34a; margin: 6px 0; }
   .ayuda { text-align: center; font-size: 13px; color: #334155; margin-top: 14px; line-height: 1.5; }
   .ayuda a { color: #15803d; font-weight: bold; }
+  .modal { position: fixed; inset: 0; background: rgba(15,23,42,.6); z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal-c { background: #fff; border-radius: 14px; padding: 22px 18px; max-width: 420px; width: 100%; text-align: center; }
+  .opciones button.bloq { opacity: .35; }
 </style>
 </head>
 <body>
@@ -60,6 +63,8 @@
     <button type="button" id="bUS" onclick="elegirEmpresa('US')"><img id="imgUS" alt="">UnionStar (US)</button>
     <button type="button" id="bUSDL" onclick="elegirEmpresa('USDL')"><img id="imgUSDL" alt="">Unión Star Distribuidora (USDL)</button>
   </div>
+
+  <div class="hint" id="empNota"></div>
 
   <div class="sec">2. Tus datos</div>
   <label for="nombre">Apellidos y nombres (igual que en tu DNI)</label>
@@ -97,6 +102,15 @@
   <button type="button" class="btn btn-ok" id="btnEnviar" onclick="enviar()">Firmar y enviar planilla</button>
   <div class="ayuda">📞 ¿Dudas o problemas con la app? <a href="https://wa.me/51922635017" target="_blank" rel="noopener">Escríbeme por WhatsApp</a> o llama al <a href="tel:+51922635017">922 635 017</a></div>
 </div>
+
+<div class="modal hidden" id="confModal"><div class="modal-c">
+  <div style="font-size:15px">Vas a enviar tu planilla a:</div>
+  <img id="confLogo" alt="" style="height:60px;margin:12px auto;display:block">
+  <div id="confEmp" style="font-size:19px;font-weight:bold;color:#1a3b5c"></div>
+  <div style="font-size:14px;margin-top:10px">¿Es la empresa correcta?</div>
+  <button type="button" class="btn btn-ok" id="confSi">Sí, enviar</button>
+  <button type="button" class="btn btn-sec" id="confNo">No, corregir</button>
+</div></div>
 
 <div class="card hidden" id="okCard">
   <div class="ok">
@@ -633,7 +647,20 @@ function textoSemana(a, b) {
   return 'DEL ' + d1 + ' AL ' + d2 + ' DE ' + MESES[m2 - 1] + ' DEL ' + a2;
 }
 
-function elegirEmpresa(e) { empresa = e; ['US', 'USDL'].forEach(k => $('b' + k).classList.toggle('sel', k === e)); guardar(); }
+let EMP_FIJA = null, empTimer = null;
+function elegirEmpresa(e) {
+  if (EMP_FIJA && e !== EMP_FIJA) { $('empNota').textContent = '🔒 Tu empresa asignada es ' + (EMP_FIJA === 'US' ? 'UnionStar (US)' : 'Unión Star Distribuidora (USDL)') + '. Si cambiaste de empresa, avisa a RR.HH.'; return; }
+  empresa = e; ['US', 'USDL'].forEach(k => $('b' + k).classList.toggle('sel', k === e)); guardar();
+}
+async function revisarEmpresa() {
+  const dni = $('dni').value.trim().toUpperCase();
+  if (!/^[0-9A-Z]{8,12}$/.test(dni)) { EMP_FIJA = null; ['US', 'USDL'].forEach(k => $('b' + k).classList.remove('bloq')); $('empNota').textContent = ''; return; }
+  let r = null; try { r = await api('empresa_de_dni', { p_dni: dni }); } catch (e) { return; }
+  if (dni !== $('dni').value.trim().toUpperCase()) return;
+  EMP_FIJA = (r === 'US' || r === 'USDL') ? r : null;
+  ['US', 'USDL'].forEach(k => $('b' + k).classList.toggle('bloq', !!EMP_FIJA && k !== EMP_FIJA));
+  if (EMP_FIJA) { elegirEmpresa(EMP_FIJA); $('empNota').textContent = '🔒 Empresa asignada a tu DNI por RR.HH.'; } else $('empNota').textContent = '';
+}
 function elegirCargo(c) { cargo = c; CFG.cargos.forEach(k => $('c' + k).classList.toggle('sel', k === c)); guardar(); }
 
 // ---------- Rutas ----------
@@ -728,6 +755,15 @@ async function sha256(t) {
   try { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join(''); }
   catch (e) { return '—'; }
 }
+function confirmarEmpresa() {
+  return new Promise(res => {
+    $('confEmp').textContent = CFG.empresas[empresa];
+    $('confLogo').src = LOGOS[empresa].src;
+    $('confModal').classList.remove('hidden');
+    $('confSi').onclick = () => { $('confModal').classList.add('hidden'); res(true); };
+    $('confNo').onclick = () => { $('confModal').classList.add('hidden'); window.scrollTo(0, 0); res(false); };
+  });
+}
 async function enviar() {
   const av = $('avisoFinal'); av.textContent = '';
   const nombre = $('nombre').value.trim().toUpperCase().replace(/\s+/g, ' '), dni = $('dni').value.trim().toUpperCase();
@@ -744,6 +780,7 @@ async function enviar() {
   if (puntos < 15) return av.textContent = 'Firma en el recuadro.';
   if (!$('declaracion').checked) return av.textContent = 'Marca la declaración jurada.';
   
+  if (!(await confirmarEmpresa())) return;
   const btn = $('btnEnviar'); btn.disabled = true; btn.textContent = 'Enviando…';
   try {
     const ord = rutas.map(r => ({ fecha: r.fecha, fechaTxt: fmt(r.fecha), destino: r.destino, monto: r.monto })).sort((a, b) => a.fecha < b.fecha ? -1 : 1);
@@ -781,7 +818,9 @@ window.addEventListener('load', () => {
   $('hintMax').textContent = 'Envía tu planilla al terminar la semana, con todos tus viajes. Una fila por día, máximo S/ ' + CFG.maxPorDia.toFixed(2) + ' por día.';
   $('area').value = 'DESPACHO PROVINCIA'; $('motivo').value = 'TRASLADO DE MERCADERÍA';
   ['nombre', 'dni', 'area', 'motivo'].forEach(k => $(k).addEventListener('input', guardar));
+  $('dni').addEventListener('input', () => { clearTimeout(empTimer); empTimer = setTimeout(revisarEmpresa, 500); });
   if (!cargar()) agregarRuta();
+  revisarEmpresa();
   prepararCanvas();
 });
 </script>
@@ -842,7 +881,17 @@ window.addEventListener('load', () => {
   </div>
 </div>
 
+<div id="visor" class="hidden">
+  <div class="visor-bar"><b id="visorTitulo"></b><span style="flex:1"></span><button id="visorDesc">⬇ Descargar</button><button onclick="pCerrarVisor()">✕ Cerrar</button></div>
+  <iframe id="visorFrame" title="PDF de la planilla"></iframe>
+</div>
+
 <style>
+  #visor { position: fixed; inset: 0; z-index: 30; background: rgba(15,23,42,.75); display: flex; flex-direction: column; padding: 14px; }
+  #visor.hidden { display: none; }
+  .visor-bar { display: flex; gap: 8px; align-items: center; background: #fff; border-radius: 10px 10px 0 0; padding: 8px 10px; }
+  #visor button { font-size: 14px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; cursor: pointer; font-weight: bold; }
+  #visorFrame { flex: 1; width: 100%; border: 0; background: #fff; border-radius: 0 0 10px 10px; }
   .pie { text-align: center; margin: 18px 0 6px; font-size: 12px; } .pie a { color: #94a3b8; }
   #rrhh { position: fixed; inset: 0; background: #eef2f6; overflow: auto; padding: 14px; z-index: 10; }
   .pw { max-width: 1100px; margin: 0 auto; }
@@ -942,6 +991,9 @@ function pPintar() {
     return '<tr class="' + pEsc(p.estado) + '"><td><b>' + pEsc(p.nombre) + '</b><br><span class="chip">' + pEsc(p.cargo) + '</span> <span class="chip">' + pEsc(p.empresa) + '</span> <span class="chip">' + pEsc(p.numero) + '</span>' +
       (p.alerta && p.alerta.indexOf('⚠') >= 0 ? '<span class="warn">' + pEsc(p.alerta) + (rh ? '<br><button onclick="pFijarNombre(' + i + ')">Usar «' + pEsc(p.nombre) + '» como nombre correcto</button>' : '') + '</span>'
         : (p.nombre_verificado ? '<span class="okv">✔ Nombre verificado con DNI' + (rh ? ' <button class="mini" onclick="pQuitarVerif(' + i + ')">↶ Deshacer</button>' : '') + '</span>' : '<span class="warn">Nombre sin verificar' + (rh ? ' <button onclick="pFijarNombre(' + i + ')">✔ Coincide con su DNI</button>' : '') + '</span>')) +
+      (p.empresa_fija ? '<span class="' + (p.empresa_fija === p.empresa ? 'okv' : 'warn') + '">' + (p.empresa_fija === p.empresa ? '🔒 Empresa fija: ' + pEsc(p.empresa_fija) : '⚠ Enviada a ' + pEsc(p.empresa) + ', pero su empresa fija es ' + pEsc(p.empresa_fija)) + '</span>' : '<span class="warn">Empresa sin fijar (se fija al aprobar)</span>') +
+      (rh ? '<div>' + (p.empresa_fija !== p.empresa ? '<button class="mini" onclick="pEmpresaFija(' + i + ',\'' + pEsc(p.empresa) + '\')">🔒 Fijar empresa ' + pEsc(p.empresa) + '</button> ' : '') +
+        (p.empresa_fija ? '<button class="mini" onclick="pEmpresaFija(' + i + ',null)">↶ Quitar empresa fija</button>' : '') + '</div>' : '') +
       '<div class="firmas"><div><small>Firma de esta planilla</small><img id="fi-' + p.id + '" alt=""></div><div><small>' + (p.firma_ref_planilla ? 'Referencia (' + pEsc(p.firma_ref_planilla) + ')' : 'Sin firma de referencia') + '</small><img id="fr-' + p.id + '" alt=""></div></div>' +
       (rh ? '<div>' + (p.firma_ref_planilla !== p.numero ? '<button class="mini" onclick="pFirmaRef(' + i + ')">Usar esta firma como referencia</button> ' : '') +
         (p.firma_ref_planilla ? '<button class="mini" onclick="pQuitarRef(' + i + ')">↶ Quitar firma de referencia</button>' : '') + '</div>' : '') +
@@ -994,6 +1046,11 @@ async function pPonerFirmas() {
   try { const r = await papi('panel_firmas', { p_ids: faltan }); faltan.forEach(id => P_FIRMAS[id] = (r.firmas || {})[id] || '');
     Object.assign(P_REFS, r.refs || {}); pinta(); } catch (e) {}
 }
+async function pEmpresaFija(i, emp) {
+  const p = P_DATA.planillas[i];
+  if (!window.confirm(emp ? '¿Fijar ' + emp + ' como empresa de ' + p.nombre + '?\n\nDesde ahora la app solo le dejará enviar a esa empresa.' : '¿Quitar la empresa fija de ' + p.nombre + '?')) return;
+  try { await papi('panel_empresa_fija', { p_dni: p.dni, p_empresa: emp }); await pCargar(); $('pMsg').textContent = emp ? '🔒 Empresa fijada.' : '↶ Empresa fija quitada.'; } catch (e) { $('pMsg').textContent = e.message; }
+}
 async function pQuitarVerif(i) {
   const p = P_DATA.planillas[i];
   if (!window.confirm('¿Quitar la verificación del nombre de ' + p.nombre + '?')) return;
@@ -1024,10 +1081,16 @@ async function pVerPdf(i) {
     const r = await papi('panel_pdf', { p_planilla_id: p.id });
     const bin = atob(r.pdf), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
     const url = URL.createObjectURL(new Blob([u], { type: 'application/pdf' }));
-    const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.download = p.numero + '.pdf'; document.body.appendChild(a); a.click(); a.remove();
     $('pMsg').textContent = '';
+    const descargar = () => { const a = document.createElement('a'); a.href = url; a.download = p.numero + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); };
+    if (navigator.pdfViewerEnabled === false) return descargar();
+    $('visorTitulo').textContent = p.numero + ' · ' + p.nombre;
+    $('visorFrame').src = url;
+    $('visorDesc').onclick = descargar;
+    $('visor').classList.remove('hidden');
   } catch (e) { $('pMsg').textContent = e.message; }
 }
+function pCerrarVisor() { $('visor').classList.add('hidden'); const f = $('visorFrame'); if (f.src.startsWith('blob:')) URL.revokeObjectURL(f.src); f.removeAttribute('src'); }
 function pCsv() {
   const fila = r => r.map(x => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(';');
   const filas = [['N°', 'Empresa', 'Apellidos y Nombres', 'DNI', 'Cargo', 'Semana', 'Desde', 'Hasta', 'Días', 'Total S/', 'Detalle', 'Revisado', 'Estado', 'Pagado', 'Observación', 'Recibido', 'Último cambio por']];
